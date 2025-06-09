@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { useState, useMemo, useEffect } from 'react';
@@ -60,6 +59,9 @@ const TaktTimeChart = ({ rodadaSelecionada }: TaktTimeChartProps) => {
     return null;
   }, [rodadaSelecionada, rodadas, rodadasDisponiveis]);
 
+  // Verificar se é a primeira rodada
+  const isPrimeiraRodada = rodadaAtual?.numero === 1;
+
   // Carregar configuração da rodada quando ela muda
   useEffect(() => {
     const carregarConfig = async () => {
@@ -74,6 +76,31 @@ const TaktTimeChart = ({ rodadaSelecionada }: TaktTimeChartProps) => {
     };
     carregarConfig();
   }, [rodadaAtual]);
+
+  // Se for a primeira rodada, não exibir o gráfico
+  if (isPrimeiraRodada) {
+    return (
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>📊 Takt Time Médio por Equipe</span>
+            <div className="text-sm text-gray-600">
+              Analisando Rodada {rodadaAtual.numero}
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-12 text-gray-500">
+            <div className="text-6xl mb-4">🎯</div>
+            <p className="text-lg mb-2">📊 Primeira Rodada</p>
+            <p className="text-sm">
+              O gráfico de Takt Time médio será exibido a partir da segunda rodada, quando houver dados de referência para comparação.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Calcular dados do Takt Time por equipe para gráfico de barras
   const dadosTaktTimePorEquipe = useMemo(() => {
@@ -232,7 +259,6 @@ const TaktTimeChart = ({ rodadaSelecionada }: TaktTimeChartProps) => {
     return null;
   };
 
-  // Função para determinar a cor da barra baseada no desempenho
   const obterCorBarra = (data: any) => {
     if (data.pizzasEnviadas === 0) return '#d1d5db'; // Cinza para sem dados
     if (data.desempenho === 'Excelente') return '#10b981'; // Verde
@@ -305,7 +331,6 @@ const TaktTimeChart = ({ rodadaSelecionada }: TaktTimeChartProps) => {
               </BarChart>
             </ResponsiveContainer>
 
-            {/* Resumo dos dados */}
             <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-gray-50 p-3 rounded-lg text-center">
                 <div className="text-lg font-bold text-gray-700">

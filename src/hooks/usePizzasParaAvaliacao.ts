@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PizzaWithRelations } from '@/types/database';
@@ -17,9 +18,9 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
         .from('pizzas')
         .select(`
           *,
-          equipe:equipes(nome, emblema),
-          rodada:rodadas(numero, status),
-          sabor:sabores_pizza(nome)
+          equipes!inner(nome, emblema),
+          rodadas!inner(numero, status),
+          sabores_pizza(nome)
         `)
         .eq('status', 'pronta')
         .is('resultado', null)
@@ -33,8 +34,15 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
 
       if (error) throw error;
       
-      // Incluir pizzas de rodadas finalizadas que ainda precisam ser avaliadas
-      setPizzas((data || []) as PizzaWithRelations[]);
+      // Transform the data to match our PizzaWithRelations type
+      const transformedData: PizzaWithRelations[] = (data || []).map(item => ({
+        ...item,
+        equipe: item.equipes ? { nome: item.equipes.nome, emblema: item.equipes.emblema } : undefined,
+        rodada: item.rodadas ? { numero: item.rodadas.numero, status: item.rodadas.status } : undefined,
+        sabor: item.sabores_pizza ? { nome: item.sabores_pizza.nome } : undefined
+      }));
+      
+      setPizzas(transformedData);
       setError(null);
       
     } catch (err) {
@@ -77,7 +85,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
           console.log('Pizza atualizada para avaliação:', payload);
           
           // Verificar se é uma pizza que precisa de avaliação (independente do status da rodada)
-          const pizza = payload.new as PizzaWithRelations;
+          const pizza = payload.new as any;
           if (pizza && pizza.status === 'pronta' && !pizza.resultado) {
             // Nova pizza para avaliação ou pizza que ainda precisa ser avaliada
             fetchPizzasParaAvaliacao(true);

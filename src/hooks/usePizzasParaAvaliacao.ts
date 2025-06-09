@@ -19,7 +19,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
         .select(`
           *,
           equipe:equipes(nome, cor_tema, emblema),
-          rodada:rodadas(numero)
+          rodada:rodadas(numero, status)
         `)
         .eq('status', 'pronta')
         .is('resultado', null)
@@ -33,6 +33,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
 
       if (error) throw error;
       
+      // Incluir pizzas de rodadas finalizadas que ainda precisam ser avaliadas
       setPizzas((data || []) as Pizza[]);
       setError(null);
       
@@ -75,7 +76,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
         (payload) => {
           console.log('Pizza atualizada para avaliação:', payload);
           
-          // Verificar se é uma pizza que precisa de avaliação
+          // Verificar se é uma pizza que precisa de avaliação (independente do status da rodada)
           const pizza = payload.new as Pizza;
           if (pizza && pizza.status === 'pronta' && !pizza.resultado) {
             // Nova pizza para avaliação
@@ -127,7 +128,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
   useEffect(() => {
     const handleGlobalDataChange = (event: CustomEvent) => {
       const { table } = event.detail;
-      if (table === 'pizzas') {
+      if (table === 'pizzas' || table === 'rodadas') {
         setTimeout(() => {
           fetchPizzasParaAvaliacao(true);
         }, 100);

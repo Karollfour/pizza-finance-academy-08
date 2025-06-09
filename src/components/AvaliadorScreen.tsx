@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,17 +5,17 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { usePizzas } from '@/hooks/usePizzas';
+import { usePizzasParaAvaliacao } from '@/hooks/usePizzasParaAvaliacao';
 import { useEquipes } from '@/hooks/useEquipes';
-import { useRodadas } from '@/hooks/useRodadas';
+import { usePizzas } from '@/hooks/usePizzas';
 import { toast } from 'sonner';
 import HistoricoAvaliador from './HistoricoAvaliador';
 
 const AvaliadorScreen = () => {
-  const { rodadaAtual } = useRodadas();
   const { equipes } = useEquipes();
   const [equipeParaAvaliar, setEquipeParaAvaliar] = useState<string | null>(null);
-  const { pizzas, avaliarPizza } = usePizzas(equipeParaAvaliar || undefined, rodadaAtual?.id);
+  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar || undefined);
+  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar || undefined);
   const [motivosReprovacao, setMotivosReprovacao] = useState<{ [key: string]: string }>({});
 
   // Cores predefinidas para as equipes
@@ -39,16 +38,16 @@ const AvaliadorScreen = () => {
     { value: 'fora_padrao_sequencia_errada', label: 'Fora do padrão e Sequência Errada' }
   ];
 
-  // Ordenar pizzas cronologicamente (mais antiga primeiro)
-  const pizzasOrdenadas = pizzas.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  // Usar pizzas para avaliação que incluem rodadas finalizadas
+  const pizzasOrdenadas = pizzasParaAvaliacao.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   
-  const pizzasPendentes = pizzasOrdenadas.filter(p => p.status === 'pronta');
-  const pizzasAvaliadas = pizzasOrdenadas.filter(p => p.status === 'avaliada');
+  const pizzasPendentes = pizzasOrdenadas.filter(p => p.status === 'pronta' && !p.resultado);
+  const pizzasAvaliadas = todasPizzas.filter(p => p.status === 'avaliada' && equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true);
 
   // Função para obter o número do pedido baseado na ordem cronológica
   const getNumeroPedido = (pizza: any) => {
     // Ordenar todas as pizzas da equipe na rodada por data de criação
-    const todasPizzasOrdenadas = pizzas
+    const todasPizzasOrdenadas = todasPizzas
       .filter(p => p.equipe_id === pizza.equipe_id && p.rodada_id === pizza.rodada_id)
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     
@@ -108,6 +107,10 @@ const AvaliadorScreen = () => {
     return pizza.sabor?.nome || 'Sabor não informado';
   };
 
+  const getRodadaInfo = (pizza: any) => {
+    return pizza.rodada ? `Rodada ${pizza.rodada.numero} (${pizza.rodada.status})` : 'Rodada N/A';
+  };
+
   // Se não selecionou equipe ainda, mostrar seletor
   if (!equipeParaAvaliar) {
     return (
@@ -118,13 +121,11 @@ const AvaliadorScreen = () => {
               🧑‍🏫 Central de Avaliação
             </h1>
             <p className="text-purple-700">Selecione uma equipe para avaliar suas pizzas</p>
-            {rodadaAtual && (
-              <div className="mt-4 p-3 bg-white/70 rounded-lg">
-                <span className="text-lg font-semibold text-purple-800">
-                  Rodada {rodadaAtual.numero} - Status: {rodadaAtual.status}
-                </span>
-              </div>
-            )}
+            <div className="mt-4 p-3 bg-white/70 rounded-lg">
+              <span className="text-lg font-semibold text-purple-800">
+                ⏰ Avaliação disponível mesmo após o fim das rodadas
+              </span>
+            </div>
           </div>
 
           <Card className="shadow-lg border-2 border-purple-200">
@@ -208,14 +209,12 @@ const AvaliadorScreen = () => {
               <h1 className="text-3xl font-bold">{equipeSelecionada?.nome}</h1>
             </div>
           </div>
-          <p className="text-gray-600">Avaliando pizzas da equipe selecionada - Ordenadas cronologicamente</p>
-          {rodadaAtual && (
-            <div className="mt-4 p-3 bg-white/70 rounded-lg">
-              <span className="text-lg font-semibold text-purple-800">
-                Rodada {rodadaAtual.numero} - Status: {rodadaAtual.status}
-              </span>
-            </div>
-          )}
+          <p className="text-gray-600">Avaliando pizzas da equipe selecionada - Incluindo rodadas finalizadas</p>
+          <div className="mt-4 p-3 bg-white/70 rounded-lg">
+            <span className="text-lg font-semibold text-purple-800">
+              ⏰ Pizzas pendentes podem ser avaliadas mesmo após o fim das rodadas
+            </span>
+          </div>
         </div>
 
         <Tabs defaultValue="pending" className="space-y-6">
@@ -240,7 +239,7 @@ const AvaliadorScreen = () => {
                       <CardTitle className="flex items-center justify-between">
                         <span>{getEquipeNome(pizza.equipe_id)}</span>
                         <Badge variant="outline">
-                          Rodada {rodadaAtual?.numero || 'N/A'}
+                          {getRodadaInfo(pizza)}
                         </Badge>
                       </CardTitle>
                       <CardDescription>
@@ -254,6 +253,7 @@ const AvaliadorScreen = () => {
                         <div className="space-y-1">
                           <p className="text-lg font-semibold text-gray-700">Pizza {getSaborPizza(pizza)}</p>
                           <p className="text-gray-600">Produzida pela {getEquipeNome(pizza.equipe_id)}</p>
+                          <p className="text-sm text-gray-500">{getRodadaInfo(pizza)}</p>
                         </div>
                       </div>
 
@@ -337,7 +337,7 @@ const AvaliadorScreen = () => {
                           <div>
                             <h3 className="font-bold">{getEquipeNome(pizza.equipe_id)}</h3>
                             <p className="text-sm text-gray-600">
-                              Pedido #{getNumeroPedido(pizza)} • Pizza #{pizza.id.slice(-6)} • Sabor: {getSaborPizza(pizza)} • Rodada {rodadaAtual?.numero || 'N/A'}
+                              Pedido #{getNumeroPedido(pizza)} • Pizza #{pizza.id.slice(-6)} • Sabor: {getSaborPizza(pizza)}
                             </p>
                             <p className="text-xs text-gray-500">
                               Avaliada: {new Date(pizza.updated_at).toLocaleString('pt-BR')}

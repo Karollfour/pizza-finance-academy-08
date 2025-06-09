@@ -27,10 +27,10 @@ const AvaliadorScreen = () => {
   console.log('AvaliadorScreen: useEquipes called, equipes length:', equipes?.length);
 
   // Always pass the same type consistently - use empty string instead of undefined to maintain stability
-  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar || '');
+  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar);
   console.log('AvaliadorScreen: usePizzasParaAvaliacao called, pizzas length:', pizzasParaAvaliacao?.length);
 
-  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar || '');
+  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar);
   console.log('AvaliadorScreen: usePizzas called, pizzas length:', todasPizzas?.length);
 
   console.log('AvaliadorScreen: All hooks called successfully');
@@ -130,8 +130,8 @@ const AvaliadorScreen = () => {
 
   console.log('AvaliadorScreen: About to render, equipeParaAvaliar:', equipeParaAvaliar);
 
-  // CONDITIONAL RENDERING - ONLY AFTER ALL HOOKS ARE CALLED
-  if (!equipeParaAvaliar) {
+  // CONDITIONAL RENDERING - FIXED: Check for empty string explicitly instead of falsy check
+  if (equipeParaAvaliar === '' || !equipeParaAvaliar) {
     console.log('AvaliadorScreen: Rendering team selection screen');
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-6">
@@ -231,7 +231,7 @@ const AvaliadorScreen = () => {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-4 mb-4">
             <Button
-              onClick={() => setEquipeParaAvaliar(null)}
+              onClick={() => setEquipeParaAvaliar('')}
               variant="outline"
               className="bg-white/90 backdrop-blur-sm border-2 border-purple-200 hover:bg-purple-50"
             >

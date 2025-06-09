@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import HistoricoAvaliador from './HistoricoAvaliador';
 import { PizzaWithRelations } from '@/types/database';
 
 const AvaliadorScreen = () => {
+  // ALL HOOKS MUST BE CALLED AT THE TOP LEVEL - NO CONDITIONAL HOOKS
   const { equipes } = useEquipes();
   const [equipeParaAvaliar, setEquipeParaAvaliar] = useState<string | null>(null);
   const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar || undefined);
@@ -119,7 +121,7 @@ const AvaliadorScreen = () => {
     return pizza.rodada ? `Rodada ${pizza.rodada.numero} (${pizza.rodada.status})` : 'Rodada N/A';
   };
 
-  // Se não selecionou equipe ainda, mostrar seletor
+  // CONDITIONAL RENDERING - NO EARLY RETURNS WITH HOOKS AFTER
   if (!equipeParaAvaliar) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-6">

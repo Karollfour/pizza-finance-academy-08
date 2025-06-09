@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,15 +22,16 @@ const AvaliadorScreen = () => {
 
   console.log('AvaliadorScreen: State hooks called, equipeParaAvaliar:', equipeParaAvaliar);
 
-  // CUSTOM HOOKS - CALLED UNCONDITIONALLY WITH STABLE PARAMETERS
+  // CUSTOM HOOKS - CALLED UNCONDITIONALLY WITH CONSISTENT PARAMETERS
   const { equipes } = useEquipes();
   console.log('AvaliadorScreen: useEquipes called, equipes length:', equipes?.length);
 
-  // Use undefined instead of empty string to avoid potential issues
-  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar || undefined);
+  // Always pass the same type - either string or undefined, never switch between them
+  const equipeId = equipeParaAvaliar || undefined;
+  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeId);
   console.log('AvaliadorScreen: usePizzasParaAvaliacao called, pizzas length:', pizzasParaAvaliacao?.length);
 
-  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar || undefined);
+  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeId);
   console.log('AvaliadorScreen: usePizzas called, pizzas length:', todasPizzas?.length);
 
   console.log('AvaliadorScreen: All hooks called successfully');

@@ -14,12 +14,14 @@ import HistoricoAvaliador from './HistoricoAvaliador';
 import { PizzaWithRelations } from '@/types/database';
 
 const AvaliadorScreen = () => {
-  // ALL HOOKS MUST BE CALLED AT THE TOP LEVEL - NO CONDITIONAL HOOKS
-  const { equipes } = useEquipes();
+  // STATE HOOKS - MUST BE CALLED UNCONDITIONALLY
   const [equipeParaAvaliar, setEquipeParaAvaliar] = useState<string | null>(null);
-  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar || undefined);
-  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar || undefined);
   const [motivosReprovacao, setMotivosReprovacao] = useState<{ [key: string]: string }>({});
+
+  // CUSTOM HOOKS - CALLED UNCONDITIONALLY WITH STABLE PARAMETERS
+  const { equipes } = useEquipes();
+  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar || '');
+  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar || '');
 
   // Cores predefinidas para as equipes
   const coresEquipe = [
@@ -41,27 +43,21 @@ const AvaliadorScreen = () => {
     { value: 'fora_padrao_sequencia_errada', label: 'Fora do padrão e Sequência Errada' }
   ];
 
-  // Usar pizzas para avaliação que incluem rodadas finalizadas
+  // DERIVED STATE - COMPUTED AFTER ALL HOOKS
   const pizzasOrdenadas = pizzasParaAvaliacao.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  
-  // Pizzas pendentes: status 'pronta' e sem resultado (independente do status da rodada)
   const pizzasPendentes = pizzasOrdenadas.filter(p => p.status === 'pronta' && !p.resultado);
-  
-  // Pizzas avaliadas: todas com status 'avaliada' (aprovadas ou reprovadas)
   const pizzasAvaliadas = todasPizzas.filter(p => 
     p.status === 'avaliada' && 
     p.resultado && 
     (equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true)
   );
 
-  // Função para obter o número do pedido baseado na ordem cronológica
+  // UTILITY FUNCTIONS
   const getNumeroPedido = (pizza: PizzaWithRelations) => {
-    // Ordenar todas as pizzas da equipe na rodada por data de criação
     const todasPizzasOrdenadas = todasPizzas
       .filter(p => p.equipe_id === pizza.equipe_id && p.rodada_id === pizza.rodada_id)
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     
-    // Encontrar o índice da pizza atual na lista ordenada
     const indice = todasPizzasOrdenadas.findIndex(p => p.id === pizza.id);
     return indice + 1;
   };
@@ -77,7 +73,6 @@ const AvaliadorScreen = () => {
         'Avaliador'
       );
 
-      // Limpar motivo de reprovação
       const newMotivos = { ...motivosReprovacao };
       delete newMotivos[pizzaId];
       setMotivosReprovacao(newMotivos);
@@ -121,7 +116,7 @@ const AvaliadorScreen = () => {
     return pizza.rodada ? `Rodada ${pizza.rodada.numero} (${pizza.rodada.status})` : 'Rodada N/A';
   };
 
-  // CONDITIONAL RENDERING - NO EARLY RETURNS WITH HOOKS AFTER
+  // CONDITIONAL RENDERING - ONLY AFTER ALL HOOKS ARE CALLED
   if (!equipeParaAvaliar) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-6">

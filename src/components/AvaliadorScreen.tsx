@@ -29,11 +29,11 @@ const AvaliadorScreen = () => {
   const { rodadaAtual } = useOptimizedRodadas();
   console.log('AvaliadorScreen: useEquipes called, equipes length:', equipes?.length);
 
-  // Pass rodadaAtual instead of equipeParaAvaliar to fix the type error
-  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(rodadaAtual);
+  // Agora usa rodadaAtual corretamente
+  const { pizzas: pizzasParaAvaliacao, avaliarPizza: avaliarPizzaHook } = usePizzasParaAvaliacao(rodadaAtual);
   console.log('AvaliadorScreen: usePizzasParaAvaliacao called, pizzas length:', pizzasParaAvaliacao?.length);
 
-  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar);
+  const { pizzas: todasPizzas } = usePizzas(equipeParaAvaliar);
   console.log('AvaliadorScreen: usePizzas called, pizzas length:', todasPizzas?.length);
 
   const { tempoRestante, estaNoTempoAdicional } = useAvaliacaoTimeout();
@@ -62,7 +62,7 @@ const AvaliadorScreen = () => {
   ];
 
   // DERIVED STATE - COMPUTED AFTER ALL HOOKS
-  // Filter pizzas by selected team
+  // Filter pizzas by selected team - agora filtra corretamente por equipe
   const pizzasEquipeFiltradas = pizzasParaAvaliacao.filter(p => 
     equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true
   );
@@ -88,11 +88,10 @@ const AvaliadorScreen = () => {
     try {
       const justificativa = approved ? 'Pizza aprovada!' : motivosReprovacao[pizzaId] || '';
       
-      await avaliarPizza(
+      await avaliarPizzaHook(
         pizzaId,
         approved ? 'aprovada' : 'reprovada',
-        justificativa,
-        'Avaliador'
+        justificativa
       );
 
       const newMotivos = { ...motivosReprovacao };

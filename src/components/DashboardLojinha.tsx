@@ -98,23 +98,30 @@ const DashboardLojinha = () => {
     const rodada = getRodadaPorNumero(numeroRodada);
     if (!rodada) return [];
 
+    // Lista específica de produtos que são matéria-prima
+    const materiasPrimas = ['caixa de pizza', 'mussarela', 'pepperoni', 'massa de pizza'];
+
     return equipes.map(equipe => {
       // Filtrar compras da rodada específica
       const comprasEquipeRodada = compras.filter(c => c.equipe_id === equipe.id && c.rodada_id === rodada.id);
       
-      // Calcular MP (Matéria-Prima) - todos os produtos exceto forno e descanso de massa
+      // Calcular MP (Matéria-Prima) - apenas produtos específicos
       const comprasMP = comprasEquipeRodada.filter(c => {
         if (!c.produto_id) return false;
         const produto = produtos.find(p => p.id === c.produto_id);
-        return produto && !produto.nome.toLowerCase().includes('forno') && !produto.nome.toLowerCase().includes('descanso');
+        return produto && materiasPrimas.some(mp => 
+          produto.nome.toLowerCase().includes(mp.toLowerCase())
+        );
       });
       const mp = comprasMP.reduce((sum, c) => sum + c.valor_total, 0);
       
-      // Calcular EQ (Equipamento) - forno e descanso de massa
+      // Calcular EQ (Equipamento) - todos os outros produtos da loja
       const comprasEQ = comprasEquipeRodada.filter(c => {
         if (!c.produto_id) return false;
         const produto = produtos.find(p => p.id === c.produto_id);
-        return produto && (produto.nome.toLowerCase().includes('forno') || produto.nome.toLowerCase().includes('descanso'));
+        return produto && !materiasPrimas.some(mp => 
+          produto.nome.toLowerCase().includes(mp.toLowerCase())
+        );
       });
       
       // Para equipamentos, dividir o valor total pelo número de rodadas em que foi usado

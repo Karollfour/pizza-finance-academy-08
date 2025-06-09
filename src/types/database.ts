@@ -11,6 +11,13 @@ export type ProdutoLoja = Database['public']['Tables']['produtos_loja']['Row']
 export type SaborPizza = Database['public']['Tables']['sabores_pizza']['Row']
 export type Configuracao = Database['public']['Tables']['configuracoes']['Row']
 
+// Extended Pizza type with populated relations for evaluation screen
+export type PizzaWithRelations = Pizza & {
+  equipe?: { nome: string; emblema?: string };
+  rodada?: { numero: number; status: string };
+  sabor?: { nome: string };
+}
+
 export interface Equipe {
   id: string;
   nome: string;

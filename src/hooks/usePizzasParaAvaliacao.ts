@@ -1,10 +1,9 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Pizza } from '@/types/database';
+import { PizzaWithRelations } from '@/types/database';
 
 export const usePizzasParaAvaliacao = (equipeId?: string) => {
-  const [pizzas, setPizzas] = useState<Pizza[]>([]);
+  const [pizzas, setPizzas] = useState<PizzaWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<any>(null);
@@ -35,7 +34,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
       if (error) throw error;
       
       // Incluir pizzas de rodadas finalizadas que ainda precisam ser avaliadas
-      setPizzas((data || []) as Pizza[]);
+      setPizzas((data || []) as PizzaWithRelations[]);
       setError(null);
       
     } catch (err) {
@@ -78,7 +77,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
           console.log('Pizza atualizada para avaliação:', payload);
           
           // Verificar se é uma pizza que precisa de avaliação (independente do status da rodada)
-          const pizza = payload.new as Pizza;
+          const pizza = payload.new as PizzaWithRelations;
           if (pizza && pizza.status === 'pronta' && !pizza.resultado) {
             // Nova pizza para avaliação ou pizza que ainda precisa ser avaliada
             fetchPizzasParaAvaliacao(true);

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { useEquipes } from '@/hooks/useEquipes';
 import { usePizzas } from '@/hooks/usePizzas';
 import { toast } from 'sonner';
 import HistoricoAvaliador from './HistoricoAvaliador';
+import { PizzaWithRelations } from '@/types/database';
 
 const AvaliadorScreen = () => {
   const { equipes } = useEquipes();
@@ -46,7 +48,7 @@ const AvaliadorScreen = () => {
   const pizzasAvaliadas = todasPizzas.filter(p => p.status === 'avaliada' && equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true);
 
   // Função para obter o número do pedido baseado na ordem cronológica
-  const getNumeroPedido = (pizza: any) => {
+  const getNumeroPedido = (pizza: PizzaWithRelations) => {
     // Ordenar todas as pizzas da equipe na rodada por data de criação
     const todasPizzasOrdenadas = todasPizzas
       .filter(p => p.equipe_id === pizza.equipe_id && p.rodada_id === pizza.rodada_id)
@@ -104,11 +106,11 @@ const AvaliadorScreen = () => {
     return coresEquipe[index % coresEquipe.length];
   };
 
-  const getSaborPizza = (pizza: any) => {
+  const getSaborPizza = (pizza: PizzaWithRelations) => {
     return pizza.sabor?.nome || 'Sabor não informado';
   };
 
-  const getRodadaInfo = (pizza: any) => {
+  const getRodadaInfo = (pizza: PizzaWithRelations) => {
     return pizza.rodada ? `Rodada ${pizza.rodada.numero} (${pizza.rodada.status})` : 'Rodada N/A';
   };
 
@@ -350,7 +352,7 @@ const AvaliadorScreen = () => {
                           <div>
                             <h3 className="font-bold">{getEquipeNome(pizza.equipe_id)}</h3>
                             <p className="text-sm text-gray-600">
-                              Pedido #{getNumeroPedido(pizza)} • Pizza #{pizza.id.slice(-6)} • Sabor: {getSaborPizza(pizza)}
+                              Pedido #{getNumeroPedido(pizza as PizzaWithRelations)} • Pizza #{pizza.id.slice(-6)} • Sabor: {getSaborPizza(pizza as PizzaWithRelations)}
                             </p>
                             <p className="text-xs text-gray-500">
                               Avaliada: {new Date(pizza.updated_at).toLocaleString('pt-BR')}

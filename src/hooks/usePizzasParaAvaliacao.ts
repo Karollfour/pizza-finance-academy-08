@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Pizza, Rodada } from '@/types/database';
@@ -188,7 +187,7 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
           if (payload.eventType === 'INSERT') {
             const novaPizza = payload.new as Pizza;
             
-            // Adicionar apenas se estiver pronta e sem resultado
+            // Adicionar imediatamente se estiver pronta e sem resultado
             if (novaPizza.status === 'pronta' && !novaPizza.resultado) {
               // Buscar dados completos da pizza com joins
               const { data: pizzaCompleta } = await supabase
@@ -219,10 +218,8 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
           } else if (payload.eventType === 'UPDATE') {
             const pizzaAtualizada = payload.new as Pizza;
             
-            // Remover da lista se foi avaliada ou mudou status
-            if (pizzaAtualizada.status === 'avaliada' || pizzaAtualizada.resultado) {
-              setPizzas(prev => prev.filter(p => p.id !== pizzaAtualizada.id));
-            } else if (pizzaAtualizada.status === 'pronta' && !pizzaAtualizada.resultado) {
+            // Se mudou para 'pronta' e não tem resultado, adicionar à lista
+            if (pizzaAtualizada.status === 'pronta' && !pizzaAtualizada.resultado) {
               // Buscar dados completos se ficou pronta
               const { data: pizzaCompleta } = await supabase
                 .from('pizzas')
@@ -240,10 +237,17 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
                   if (exists) {
                     return prev.map(p => p.id === pizzaAtualizada.id ? pizzaCompleta as Pizza : p);
                   } else {
+                    console.log('Pizza ficou pronta, adicionando à avaliação:', pizzaCompleta);
+                    toast.info('🍕 Nova pizza pronta para avaliação!', {
+                      duration: 3000,
+                    });
                     return [pizzaCompleta as Pizza, ...prev];
                   }
                 });
               }
+            } else if (pizzaAtualizada.status === 'avaliada' || pizzaAtualizada.resultado) {
+              // Remover da lista se foi avaliada
+              setPizzas(prev => prev.filter(p => p.id !== pizzaAtualizada.id));
             }
           } else if (payload.eventType === 'DELETE') {
             const pizzaRemovida = payload.old as Pizza;
@@ -275,10 +279,13 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
   // Escutar eventos globais para sincronização adicional
   useEffect(() => {
     const handleGlobalDataChange = (event: CustomEvent) => {
-      const { table } = event.detail;
+      const { table, action } = event.detail;
       if (table === 'pizzas') {
-        console.log('Atualizando pizzas para avaliação por evento global');
-        fetchPizzasParaAvaliacao();
+        console.log('Evento global detectado, atualizando pizzas para avaliação:', action);
+        // Delay pequeno para garantir que o banco processou
+        setTimeout(() => {
+          fetchPizzasParaAvaliacao();
+        }, 100);
       }
     };
 
@@ -287,7 +294,7 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
       // Aguardar um momento para o banco processar e depois atualizar
       setTimeout(() => {
         fetchPizzasParaAvaliacao();
-      }, 500);
+      }, 200);
     };
 
     const handlePizzaAvaliada = () => {
@@ -299,12 +306,14 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
     window.addEventListener('pizza-enviada-com-sabor', handlePizzaEnviada as EventListener);
     window.addEventListener('nova-pizza-disponivel', handlePizzaEnviada as EventListener);
     window.addEventListener('pizza-avaliada', handlePizzaAvaliada);
+    window.addEventListener('pizza-sabor-selecionado', handlePizzaEnviada as EventListener);
 
     return () => {
       window.removeEventListener('global-data-changed', handleGlobalDataChange as EventListener);
       window.removeEventListener('pizza-enviada-com-sabor', handlePizzaEnviada as EventListener);
       window.removeEventListener('nova-pizza-disponivel', handlePizzaEnviada as EventListener);
       window.removeEventListener('pizza-avaliada', handlePizzaAvaliada);
+      window.removeEventListener('pizza-sabor-selecionado', handlePizzaEnviada as EventListener);
     };
   }, []);
 

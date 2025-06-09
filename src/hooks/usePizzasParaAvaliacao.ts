@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PizzaWithRelations } from '@/types/database';
+import { useOptimizedRodadas } from './useOptimizedRodadas';
 
 export const usePizzasParaAvaliacao = (equipeId: string) => {
   const [pizzas, setPizzas] = useState<PizzaWithRelations[]>([]);
@@ -9,6 +10,7 @@ export const usePizzasParaAvaliacao = (equipeId: string) => {
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<any>(null);
   const isSubscribedRef = useRef(false);
+  const { rodadaAtual } = useOptimizedRodadas();
 
   const fetchPizzasParaAvaliacao = async (silent = false) => {
     try {
@@ -19,7 +21,7 @@ export const usePizzasParaAvaliacao = (equipeId: string) => {
         .select(`
           *,
           equipes!inner(nome),
-          rodadas!inner(numero, status),
+          rodadas!inner(numero, status, finalizou_em),
           sabores_pizza(nome)
         `)
         .eq('status', 'pronta')
@@ -39,11 +41,35 @@ export const usePizzasParaAvaliacao = (equipeId: string) => {
       const transformedData: PizzaWithRelations[] = (data || []).map(item => ({
         ...item,
         equipe: item.equipes ? { nome: item.equipes.nome } : undefined,
-        rodada: item.rodadas ? { numero: item.rodadas.numero, status: item.rodadas.status } : undefined,
+        rodada: item.rodadas ? { 
+          numero: item.rodadas.numero, 
+          status: item.rodadas.status,
+          finalizou_em: item.rodadas.finalizou_em
+        } : undefined,
         sabor: item.sabores_pizza ? { nome: item.sabores_pizza.nome } : undefined
       }));
+
+      // Filtrar pizzas considerando o tempo adicional de avaliação
+      const pizzasFiltradas = transformedData.filter(pizza => {
+        // Se a rodada não está finalizada, mostrar todas as pizzas prontas
+        if (!pizza.rodada || pizza.rodada.status !== 'finalizada') {
+          return true;
+        }
+
+        // Se a rodada está finalizada, verificar se ainda está no tempo adicional
+        if (pizza.rodada.finalizou_em) {
+          const agora = new Date().getTime();
+          const fimRodada = new Date(pizza.rodada.finalizou_em).getTime();
+          const fimTempoAdicional = fimRodada + (60 * 1000); // 1 minuto adicional
+          
+          // Mostrar pizza se ainda está no tempo adicional
+          return agora <= fimTempoAdicional;
+        }
+
+        return true;
+      });
       
-      setPizzas(transformedData);
+      setPizzas(pizzasFiltradas);
       setError(null);
       
     } catch (err) {
@@ -161,14 +187,23 @@ export const usePizzasParaAvaliacao = (equipeId: string) => {
       }, 100);
     };
 
+    const handlePizzasReprovadas = () => {
+      // Quando pizzas são reprovadas automaticamente
+      setTimeout(() => {
+        fetchPizzasParaAvaliacao(true);
+      }, 100);
+    };
+
     window.addEventListener('global-data-changed', handleGlobalDataChange as EventListener);
     window.addEventListener('nova-pizza-para-avaliacao', handleNovaPizza as EventListener);
     window.addEventListener('rodada-finalizada', handleRodadaFinalizada);
+    window.addEventListener('pizzas-reprovadas-automaticamente', handlePizzasReprovadas);
 
     return () => {
       window.removeEventListener('global-data-changed', handleGlobalDataChange as EventListener);
       window.removeEventListener('nova-pizza-para-avaliacao', handleNovaPizza as EventListener);
       window.removeEventListener('rodada-finalizada', handleRodadaFinalizada);
+      window.removeEventListener('pizzas-reprovadas-automaticamente', handlePizzasReprovadas);
     };
   }, [equipeId]);
 

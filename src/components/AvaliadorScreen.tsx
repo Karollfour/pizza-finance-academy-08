@@ -28,10 +28,12 @@ const AvaliadorScreen = () => {
   const { equipes } = useEquipes();
   const { rodadaAtual } = useOptimizedRodadas();
   console.log('AvaliadorScreen: useEquipes called, equipes length:', equipes?.length);
+  console.log('AvaliadorScreen: rodadaAtual:', rodadaAtual);
 
-  // Agora usa rodadaAtual corretamente
-  const { pizzas: pizzasParaAvaliacao, avaliarPizza: avaliarPizzaHook } = usePizzasParaAvaliacao(rodadaAtual);
-  console.log('AvaliadorScreen: usePizzasParaAvaliacao called, pizzas length:', pizzasParaAvaliacao?.length);
+  // Buscar TODAS as pizzas para avaliação (sem filtro de equipe aqui)
+  const { pizzas: todasPizzasParaAvaliacao, avaliarPizza: avaliarPizzaHook } = usePizzasParaAvaliacao(rodadaAtual);
+  console.log('AvaliadorScreen: usePizzasParaAvaliacao called, pizzas length:', todasPizzasParaAvaliacao?.length);
+  console.log('AvaliadorScreen: pizzas para avaliação:', todasPizzasParaAvaliacao);
 
   const { pizzas: todasPizzas } = usePizzas(equipeParaAvaliar);
   console.log('AvaliadorScreen: usePizzas called, pizzas length:', todasPizzas?.length);
@@ -62,10 +64,13 @@ const AvaliadorScreen = () => {
   ];
 
   // DERIVED STATE - COMPUTED AFTER ALL HOOKS
-  // Filter pizzas by selected team - agora filtra corretamente por equipe
-  const pizzasEquipeFiltradas = pizzasParaAvaliacao.filter(p => 
-    equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true
-  );
+  // Filtrar pizzas por equipe selecionada OU mostrar todas se nenhuma equipe selecionada
+  const pizzasEquipeFiltradas = equipeParaAvaliar 
+    ? todasPizzasParaAvaliacao.filter(p => p.equipe_id === equipeParaAvaliar)
+    : todasPizzasParaAvaliacao;
+  
+  console.log('AvaliadorScreen: pizzasEquipeFiltradas:', pizzasEquipeFiltradas);
+  
   const pizzasOrdenadas = pizzasEquipeFiltradas.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const pizzasPendentes = pizzasOrdenadas.filter(p => p.status === 'pronta' && !p.resultado);
   const pizzasAvaliadas = todasPizzas.filter(p => 
@@ -73,6 +78,9 @@ const AvaliadorScreen = () => {
     p.resultado && 
     (equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true)
   );
+
+  console.log('AvaliadorScreen: pizzasPendentes:', pizzasPendentes);
+  console.log('AvaliadorScreen: pizzasAvaliadas:', pizzasAvaliadas);
 
   // UTILITY FUNCTIONS
   const getNumeroPedido = (pizza: PizzaWithRelations) => {
@@ -163,6 +171,17 @@ const AvaliadorScreen = () => {
               ⏰ Pizzas permanecem disponíveis por 1 minuto após o fim da rodada
             </span>
           </div>
+          
+          {/* Botão para ver todas as pizzas */}
+          <div className="mt-4">
+            <Button
+              onClick={() => setEquipeParaAvaliar('all')}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 text-lg"
+              size="lg"
+            >
+              📋 Ver Todas as Pizzas para Avaliação
+            </Button>
+          </div>
         </div>
 
         <Card className="shadow-lg border-2 border-purple-200">
@@ -230,6 +249,7 @@ const AvaliadorScreen = () => {
     const equipeSelecionada = getEquipeSelecionada();
     const indexEquipe = equipes.findIndex(e => e.id === equipeParaAvaliar);
     const corEquipe = getCorEquipe(indexEquipe);
+    const isAllTeams = equipeParaAvaliar === 'all';
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-6">
@@ -244,11 +264,15 @@ const AvaliadorScreen = () => {
               >
                 ← Voltar às Equipes
               </Button>
-              <div className={`px-8 py-4 rounded-lg text-white shadow-lg ${corEquipe.split(' ')[0]}`}>
-                <h1 className="text-3xl font-bold">{equipeSelecionada?.nome}</h1>
+              <div className={`px-8 py-4 rounded-lg text-white shadow-lg ${isAllTeams ? 'bg-gradient-to-r from-purple-600 to-pink-600' : corEquipe.split(' ')[0]}`}>
+                <h1 className="text-3xl font-bold">
+                  {isAllTeams ? 'Todas as Equipes' : equipeSelecionada?.nome}
+                </h1>
               </div>
             </div>
-            <p className="text-gray-600">Avaliando pizzas da equipe selecionada</p>
+            <p className="text-gray-600">
+              {isAllTeams ? 'Avaliando pizzas de todas as equipes' : 'Avaliando pizzas da equipe selecionada'}
+            </p>
             
             {/* Indicador de tempo adicional */}
             {estaNoTempoAdicional && tempoRestante !== null && tempoRestante > 0 && (
@@ -396,10 +420,10 @@ const AvaliadorScreen = () => {
                   <CardContent className="text-center py-12">
                     <div className="text-6xl mb-4">🎉</div>
                     <h3 className="text-xl font-bold text-gray-600 mb-2">
-                      Todas as pizzas desta equipe foram avaliadas!
+                      {isAllTeams ? 'Todas as pizzas foram avaliadas!' : 'Todas as pizzas desta equipe foram avaliadas!'}
                     </h3>
                     <p className="text-gray-500">
-                      Aguardando novas pizzas da {equipeSelecionada?.nome} para avaliação
+                      {isAllTeams ? 'Aguardando novas pizzas para avaliação' : `Aguardando novas pizzas da ${equipeSelecionada?.nome} para avaliação`}
                     </p>
                   </CardContent>
                 </Card>
@@ -455,7 +479,7 @@ const AvaliadorScreen = () => {
                       Nenhuma pizza avaliada ainda
                     </h3>
                     <p className="text-gray-500">
-                      As pizzas avaliadas da {equipeSelecionada?.nome} aparecerão aqui
+                      {isAllTeams ? 'As pizzas avaliadas aparecerão aqui' : `As pizzas avaliadas da ${equipeSelecionada?.nome} aparecerão aqui`}
                     </p>
                   </CardContent>
                 </Card>

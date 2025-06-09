@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useCompras } from '@/hooks/useCompras';
@@ -225,7 +226,7 @@ const DashboardLojinha = () => {
 
   return (
     <div className="space-y-6">
-      {/* Filtro Global Unificado - MOVIDO PARA O INÍCIO */}
+      {/* Filtro Global Unificado */}
       <Card className="shadow-lg border-2 border-blue-200">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -258,7 +259,7 @@ const DashboardLojinha = () => {
         </CardContent>
       </Card>
 
-      {/* NOVO: Gráfico de Análise de Lucro por Pizza - Só aparece quando uma rodada específica está selecionada */}
+      {/* Gráfico de Análise de Lucro por Pizza - Só aparece quando uma rodada específica está selecionada */}
       {rodadaSelecionada && (
         <Card className="shadow-lg border-2 border-green-200">
           <CardHeader>
@@ -351,8 +352,10 @@ const DashboardLojinha = () => {
         </Card>
       )}
 
-      {/* Gráfico de Takt Time com filtro global */}
-      <TaktTimeChart rodadaSelecionada={rodadaSelecionada} />
+      {/* Gráfico de Takt Time - APENAS este não aparece na rodada 1 */}
+      {rodadaSelecionada !== 1 && (
+        <TaktTimeChart rodadaSelecionada={rodadaSelecionada} />
+      )}
 
       {/* Novo Gráfico: Produtividade de Mão de Obra */}
       <Card>
@@ -360,46 +363,60 @@ const DashboardLojinha = () => {
           <CardTitle>👷‍♂️ Produtividade de Mão de Obra (Pizzas por Pessoa)</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={dadosProductividadeMaoDeObra(rodadaSelecionada)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="equipe" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value, name) => [
-                  name === 'pizzasPorPessoa' ? `${value} pizzas/pessoa` : value,
-                  name === 'pizzasPorPessoa' ? 'Produtividade' : name
-                ]}
-                labelFormatter={(label) => `Equipe: ${label}`}
-              />
-              <Bar dataKey="pizzasPorPessoa" fill="#8b5cf6" name="Pizzas por Pessoa" />
-            </BarChart>
-          </ResponsiveContainer>
-          
-          {/* Resumo da Produtividade */}
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {dadosProductividadeMaoDeObra(rodadaSelecionada).map((dados, index) => (
-              <Card key={index} className="text-center">
-                <CardContent className="p-4">
-                  <h4 className="font-bold text-lg mb-2">{dados.equipe}</h4>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div className="bg-purple-100 p-2 rounded">
-                      <div className="text-purple-600 font-bold">{dados.pizzasPorPessoa}</div>
-                      <div className="text-purple-700">Pizza/Pessoa</div>
-                    </div>
-                    <div className="bg-blue-100 p-2 rounded">
-                      <div className="text-blue-600 font-bold">{dados.totalPizzas}</div>
-                      <div className="text-blue-700">Total Pizzas</div>
-                    </div>
-                    <div className="bg-gray-100 p-2 rounded">
-                      <div className="text-gray-600 font-bold">{dados.quantidadePessoas}</div>
-                      <div className="text-gray-700">Pessoas</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {dadosProductividadeMaoDeObra(rodadaSelecionada).length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={dadosProductividadeMaoDeObra(rodadaSelecionada)}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="equipe" />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value, name) => [
+                      name === 'pizzasPorPessoa' ? `${value} pizzas/pessoa` : value,
+                      name === 'pizzasPorPessoa' ? 'Produtividade' : name
+                    ]}
+                    labelFormatter={(label) => `Equipe: ${label}`}
+                  />
+                  <Bar dataKey="pizzasPorPessoa" fill="#8b5cf6" name="Pizzas por Pessoa" />
+                </BarChart>
+              </ResponsiveContainer>
+              
+              {/* Resumo da Produtividade */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {dadosProductividadeMaoDeObra(rodadaSelecionada).map((dados, index) => (
+                  <Card key={index} className="text-center">
+                    <CardContent className="p-4">
+                      <h4 className="font-bold text-lg mb-2">{dados.equipe}</h4>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div className="bg-purple-100 p-2 rounded">
+                          <div className="text-purple-600 font-bold">{dados.pizzasPorPessoa}</div>
+                          <div className="text-purple-700">Pizza/Pessoa</div>
+                        </div>
+                        <div className="bg-blue-100 p-2 rounded">
+                          <div className="text-blue-600 font-bold">{dados.totalPizzas}</div>
+                          <div className="text-blue-700">Total Pizzas</div>
+                        </div>
+                        <div className="bg-gray-100 p-2 rounded">
+                          <div className="text-gray-600 font-bold">{dados.quantidadePessoas}</div>
+                          <div className="text-gray-700">Pessoas</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p className="text-lg mb-2">👷‍♂️ Nenhum dado encontrado</p>
+              <p className="text-sm">
+                {rodadaSelecionada 
+                  ? `Não há dados de produtividade na Rodada ${rodadaSelecionada}`
+                  : "Não há dados de produtividade disponíveis"
+                }
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -409,50 +426,64 @@ const DashboardLojinha = () => {
           <CardTitle>🍕 Análise de Pizzas</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Gráfico de Pizzas por Equipe */}
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={rodadaSelecionada ? dadosPizzasPorRodada(rodadaSelecionada) : dadosGeraisPorEquipe}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="equipe" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value, name) => [value, name === 'aprovadas' ? 'Aprovadas' : 'Reprovadas']} 
-                labelFormatter={(label) => `Equipe: ${label}`} 
-              />
-              <Bar dataKey="aprovadas" fill="#22c55e" name="Aprovadas" />
-              <Bar dataKey="reprovadas" fill="#ef4444" name="Reprovadas" />
-            </BarChart>
-          </ResponsiveContainer>
+          {(rodadaSelecionada ? dadosPizzasPorRodada(rodadaSelecionada) : dadosGeraisPorEquipe).length > 0 ? (
+            <>
+              {/* Gráfico de Pizzas por Equipe */}
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={rodadaSelecionada ? dadosPizzasPorRodada(rodadaSelecionada) : dadosGeraisPorEquipe}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="equipe" />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value, name) => [value, name === 'aprovadas' ? 'Aprovadas' : 'Reprovadas']} 
+                    labelFormatter={(label) => `Equipe: ${label}`} 
+                  />
+                  <Bar dataKey="aprovadas" fill="#22c55e" name="Aprovadas" />
+                  <Bar dataKey="reprovadas" fill="#ef4444" name="Reprovadas" />
+                </BarChart>
+              </ResponsiveContainer>
 
-          {/* Resumo das Pizzas */}
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(rodadaSelecionada ? dadosPizzasPorRodada(rodadaSelecionada) : dadosGeraisPorEquipe).map((dados, index) => (
-              <Card key={index} className="text-center">
-                <CardContent className="p-4">
-                  <h4 className="font-bold text-lg mb-2">{dados.equipe}</h4>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div className="bg-green-100 p-2 rounded">
-                      <div className="text-green-600 font-bold">{dados.aprovadas}</div>
-                      <div className="text-green-700">Aprovadas</div>
-                    </div>
-                    <div className="bg-red-100 p-2 rounded">
-                      <div className="text-red-600 font-bold">{dados.reprovadas}</div>
-                      <div className="text-red-700">Reprovadas</div>
-                    </div>
-                    <div className="bg-blue-100 p-2 rounded">
-                      <div className="text-blue-600 font-bold">{dados.total}</div>
-                      <div className="text-blue-700">Total</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+              {/* Resumo das Pizzas */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {(rodadaSelecionada ? dadosPizzasPorRodada(rodadaSelecionada) : dadosGeraisPorEquipe).map((dados, index) => (
+                  <Card key={index} className="text-center">
+                    <CardContent className="p-4">
+                      <h4 className="font-bold text-lg mb-2">{dados.equipe}</h4>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div className="bg-green-100 p-2 rounded">
+                          <div className="text-green-600 font-bold">{dados.aprovadas}</div>
+                          <div className="text-green-700">Aprovadas</div>
+                        </div>
+                        <div className="bg-red-100 p-2 rounded">
+                          <div className="text-red-600 font-bold">{dados.reprovadas}</div>
+                          <div className="text-red-700">Reprovadas</div>
+                        </div>
+                        <div className="bg-blue-100 p-2 rounded">
+                          <div className="text-blue-600 font-bold">{dados.total}</div>
+                          <div className="text-blue-700">Total</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p className="text-lg mb-2">🍕 Nenhum dado encontrado</p>
+              <p className="text-sm">
+                {rodadaSelecionada 
+                  ? `Não há pizzas avaliadas na Rodada ${rodadaSelecionada}`
+                  : "Não há pizzas avaliadas ainda"
+                }
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Gastos por Equipe - SEM FILTRO INDIVIDUAL */}
+        {/* Gastos por Equipe */}
         <Card>
           <CardHeader>
             <CardTitle>💰 Gastos por Equipe</CardTitle>
@@ -482,7 +513,7 @@ const DashboardLojinha = () => {
           </CardContent>
         </Card>
 
-        {/* Ganhos por Equipe - SEM FILTRO INDIVIDUAL */}
+        {/* Ganhos por Equipe */}
         <Card>
           <CardHeader>
             <CardTitle>🎉 Vendas por Equipe (Pizzas Aprovadas)</CardTitle>
@@ -518,15 +549,24 @@ const DashboardLojinha = () => {
             <CardTitle>🛒 Produtos Mais Comprados</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={produtosMaisComprados.slice(0, 5)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="nome" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="quantidade" fill="#82ca9d" />
-              </BarChart>
-            </ResponsiveContainer>
+            {produtosMaisComprados.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={produtosMaisComprados.slice(0, 5)}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="nome" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="quantidade" fill="#82ca9d" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p className="text-lg mb-2">🛒 Nenhuma compra encontrada</p>
+                <p className="text-sm">
+                  Ainda não há produtos comprados
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -536,25 +576,34 @@ const DashboardLojinha = () => {
             <CardTitle>📊 Distribuição de Gastos</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={gastosCategoria}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {gastosCategoria.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `R$ ${Number(value).toFixed(2)}`} />
-              </PieChart>
-            </ResponsiveContainer>
+            {gastosCategoria.some(g => g.value > 0) ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={gastosCategoria.filter(g => g.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {gastosCategoria.filter(g => g.value > 0).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `R$ ${Number(value).toFixed(2)}`} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p className="text-lg mb-2">📊 Nenhum gasto encontrado</p>
+                <p className="text-sm">
+                  Ainda não há gastos para categorizar
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

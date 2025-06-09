@@ -33,6 +33,7 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
 
       if (error) throw error;
       setPizzas((data || []) as Pizza[]);
+      console.log('Pizzas para avaliação carregadas:', data?.length || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar pizzas para avaliação');
     } finally {
@@ -181,7 +182,7 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
           schema: 'public',
           table: 'pizzas'
         },
-        (payload) => {
+        async (payload) => {
           console.log('Pizza atualizada na avaliação:', payload);
           
           if (payload.eventType === 'INSERT') {
@@ -189,7 +190,31 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
             
             // Adicionar apenas se estiver pronta e sem resultado
             if (novaPizza.status === 'pronta' && !novaPizza.resultado) {
-              fetchPizzasParaAvaliacao(); // Refetch para pegar dados completos com joins
+              // Buscar dados completos da pizza com joins
+              const { data: pizzaCompleta } = await supabase
+                .from('pizzas')
+                .select(`
+                  *,
+                  equipes!inner(nome, cor_tema, emblema),
+                  sabores_pizza(nome)
+                `)
+                .eq('id', novaPizza.id)
+                .single();
+              
+              if (pizzaCompleta) {
+                console.log('Nova pizza adicionada à avaliação:', pizzaCompleta);
+                setPizzas(prev => {
+                  // Evitar duplicatas
+                  const exists = prev.find(p => p.id === pizzaCompleta.id);
+                  if (exists) return prev;
+                  return [pizzaCompleta as Pizza, ...prev];
+                });
+                
+                // Mostrar toast para o avaliador
+                toast.info('🍕 Nova pizza aguardando avaliação!', {
+                  duration: 3000,
+                });
+              }
             }
           } else if (payload.eventType === 'UPDATE') {
             const pizzaAtualizada = payload.new as Pizza;
@@ -198,8 +223,27 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
             if (pizzaAtualizada.status === 'avaliada' || pizzaAtualizada.resultado) {
               setPizzas(prev => prev.filter(p => p.id !== pizzaAtualizada.id));
             } else if (pizzaAtualizada.status === 'pronta' && !pizzaAtualizada.resultado) {
-              // Adicionar à lista se ficou pronta
-              fetchPizzasParaAvaliacao(); // Refetch para pegar dados completos
+              // Buscar dados completos se ficou pronta
+              const { data: pizzaCompleta } = await supabase
+                .from('pizzas')
+                .select(`
+                  *,
+                  equipes!inner(nome, cor_tema, emblema),
+                  sabores_pizza(nome)
+                `)
+                .eq('id', pizzaAtualizada.id)
+                .single();
+              
+              if (pizzaCompleta) {
+                setPizzas(prev => {
+                  const exists = prev.find(p => p.id === pizzaAtualizada.id);
+                  if (exists) {
+                    return prev.map(p => p.id === pizzaAtualizada.id ? pizzaCompleta as Pizza : p);
+                  } else {
+                    return [pizzaCompleta as Pizza, ...prev];
+                  }
+                });
+              }
             }
           } else if (payload.eventType === 'DELETE') {
             const pizzaRemovida = payload.old as Pizza;
@@ -215,8 +259,10 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           isSubscribedRef.current = true;
+          console.log('✅ Avaliador: Conectado ao realtime de pizzas');
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           isSubscribedRef.current = false;
+          console.log('❌ Avaliador: Desconectado do realtime de pizzas');
         }
       });
     }
@@ -226,24 +272,38 @@ export const usePizzasParaAvaliacao = (rodadaAtual?: Rodada | null) => {
     };
   }, []);
 
-  // Escutar eventos globais
+  // Escutar eventos globais para sincronização adicional
   useEffect(() => {
     const handleGlobalDataChange = (event: CustomEvent) => {
       const { table } = event.detail;
       if (table === 'pizzas') {
+        console.log('Atualizando pizzas para avaliação por evento global');
         fetchPizzasParaAvaliacao();
       }
     };
 
+    const handlePizzaEnviada = (event: CustomEvent) => {
+      console.log('Pizza enviada detectada, atualizando lista do avaliador');
+      // Aguardar um momento para o banco processar e depois atualizar
+      setTimeout(() => {
+        fetchPizzasParaAvaliacao();
+      }, 500);
+    };
+
     const handlePizzaAvaliada = () => {
+      console.log('Pizza avaliada detectada');
       fetchPizzasParaAvaliacao();
     };
 
     window.addEventListener('global-data-changed', handleGlobalDataChange as EventListener);
+    window.addEventListener('pizza-enviada-com-sabor', handlePizzaEnviada as EventListener);
+    window.addEventListener('nova-pizza-disponivel', handlePizzaEnviada as EventListener);
     window.addEventListener('pizza-avaliada', handlePizzaAvaliada);
 
     return () => {
       window.removeEventListener('global-data-changed', handleGlobalDataChange as EventListener);
+      window.removeEventListener('pizza-enviada-com-sabor', handlePizzaEnviada as EventListener);
+      window.removeEventListener('nova-pizza-disponivel', handlePizzaEnviada as EventListener);
       window.removeEventListener('pizza-avaliada', handlePizzaAvaliada);
     };
   }, []);

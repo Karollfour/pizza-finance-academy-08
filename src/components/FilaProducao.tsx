@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { usePizzas } from '@/hooks/usePizzas';
 import { useOptimizedRodadas } from '@/hooks/useOptimizedRodadas';
 import { useSabores } from '@/hooks/useSabores';
+import { useSynchronizedTimer } from '@/hooks/useSynchronizedTimer';
 import { obterConfigRodada } from '@/utils/rodadaConfig';
 import { toast } from 'sonner';
 
@@ -23,6 +25,9 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
   const [enviandoPizza, setEnviandoPizza] = useState(false);
   const [limitePizzasRodada, setLimitePizzasRodada] = useState<number>(5);
   const [loadingConfig, setLoadingConfig] = useState(true);
+
+  // Timer sincronizado para verificar se o tempo acabou
+  const { timeRemaining, isActive } = useSynchronizedTimer(rodadaAtual);
 
   // Carregar configuração da rodada atual
   useEffect(() => {
@@ -55,11 +60,25 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
     return pizzasEnviadas >= limitePizzasRodada;
   };
 
+  // Verificar se a rodada está ativa e dentro do tempo
+  const podeEnviarPizza = () => {
+    if (!rodadaAtual) return false;
+    if (rodadaAtual.status !== 'ativa') return false;
+    if (!isActive || timeRemaining <= 0) return false;
+    return true;
+  };
+
   const handleEnviarPizza = async () => {
     if (!rodadaAtual) return;
     
     if (!saborSelecionado) {
       toast.error('Por favor, selecione o sabor da pizza antes de enviar!');
+      return;
+    }
+
+    // Verificar se a rodada ainda está ativa e com tempo
+    if (!podeEnviarPizza()) {
+      toast.error('⏰ Tempo esgotado! Não é possível enviar pizzas. Aguarde a próxima rodada.');
       return;
     }
 
@@ -71,6 +90,12 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
     
     try {
       setEnviandoPizza(true);
+      
+      // Verificar novamente antes de enviar (dupla verificação)
+      if (!podeEnviarPizza()) {
+        toast.error('⏰ Tempo esgotado durante o envio! Aguarde a próxima rodada.');
+        return;
+      }
       
       // Disparar evento de seleção de sabor
       if (typeof window !== 'undefined') {
@@ -126,6 +151,7 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
 
   const atingiuLimite = verificarLimitePizzas();
   const pizzasRestantes = limitePizzasRodada - pizzas.length;
+  const tempoEsgotado = !podeEnviarPizza();
 
   return (
     <div className="space-y-6">
@@ -156,6 +182,25 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
               </div>
             )}
 
+            {/* Aviso de tempo esgotado */}
+            {tempoEsgotado && rodadaAtual && (
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                <h3 className="text-lg font-bold text-red-700 mb-2">
+                  ⏰ Tempo Esgotado
+                </h3>
+                <p className="text-red-600">
+                  {rodadaAtual.status === 'ativa' && timeRemaining <= 0 ? 
+                    'O tempo da rodada acabou! Não é possível enviar mais pizzas.' :
+                    rodadaAtual.status === 'pausada' ? 
+                    'A rodada está pausada. Aguarde a retomada.' :
+                    rodadaAtual.status === 'finalizada' ?
+                    'A rodada foi finalizada. Aguarde a próxima rodada.' :
+                    'Aguarde o início da próxima rodada.'
+                  }
+                </p>
+              </div>
+            )}
+
             {atingiuLimite ? (
               <div className="p-4 bg-red-50 rounded-lg border border-red-200">
                 <h3 className="text-lg font-bold text-red-700 mb-2">
@@ -166,7 +211,7 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
                   Aguarde a próxima rodada para enviar mais pizzas.
                 </p>
               </div>
-            ) : (
+            ) : !tempoEsgotado ? (
               <>
                 <h3 className="text-xl font-bold text-gray-700">
                   Pronto para enviar uma pizza?
@@ -180,7 +225,7 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
                   <Select 
                     value={saborSelecionado} 
                     onValueChange={setSaborSelecionado}
-                    disabled={!rodadaAtual || rodadaAtual.status !== 'ativa' || loadingSabores || atingiuLimite}
+                    disabled={!podeEnviarPizza() || loadingSabores || atingiuLimite}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Escolha o sabor da pizza..." />
@@ -207,7 +252,7 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
                 <Button
                   onClick={handleEnviarPizza}
                   className="w-full h-16 text-xl bg-green-500 hover:bg-green-600 text-white font-bold"
-                  disabled={!rodadaAtual || rodadaAtual.status !== 'ativa' || !saborSelecionado || enviandoPizza || atingiuLimite}
+                  disabled={!podeEnviarPizza() || !saborSelecionado || enviandoPizza || atingiuLimite}
                 >
                   {enviandoPizza ? (
                     <>🔄 Enviando...</>
@@ -216,19 +261,22 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
                   )}
                 </Button>
                 
-                {(!rodadaAtual || rodadaAtual.status !== 'ativa') && (
+                {!podeEnviarPizza() && (
                   <p className="text-sm text-gray-500">
-                    Aguardando rodada ativa para enviar pizzas
+                    {!rodadaAtual ? 'Nenhuma rodada ativa' :
+                     rodadaAtual.status !== 'ativa' ? 'Aguardando rodada ativa' :
+                     'Tempo esgotado - aguarde próxima rodada'
+                    }
                   </p>
                 )}
                 
-                {!saborSelecionado && rodadaAtual?.status === 'ativa' && !atingiuLimite && (
+                {!saborSelecionado && podeEnviarPizza() && !atingiuLimite && (
                   <p className="text-sm text-orange-600">
                     ⚠️ Selecione o sabor da pizza antes de enviar
                   </p>
                 )}
               </>
-            )}
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -280,7 +328,7 @@ const FilaProducao = ({ equipeId, equipeNome, onPizzaEnviada }: FilaProducaoProp
       )}
 
       {/* Mensagem quando não há pizzas */}
-      {pizzas.length === 0 && rodadaAtual?.status === 'ativa' && !atingiuLimite && (
+      {pizzas.length === 0 && podeEnviarPizza() && !atingiuLimite && (
         <Card className="shadow-lg border-2 border-yellow-200">
           <CardContent className="p-8 text-center">
             <div className="text-6xl mb-4">🎯</div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -18,13 +19,17 @@ interface EquipeScreenProps {
 }
 
 const EquipeScreen = ({ teamName, teamId }: EquipeScreenProps) => {
+  const [equipeAtual, setEquipeAtual] = useState<any>(null);
+  
+  // ALL HOOKS MUST BE CALLED FIRST, BEFORE ANY CONDITIONAL RETURNS
   const { rodadaAtual, lastUpdate } = useOptimizedRodadas();
   const { equipes, loading: equipesLoading } = useEquipes();
   const { appState, updateSelectedTeam } = useAppState();
-  const [equipeAtual, setEquipeAtual] = useState<any>(null);
-  const { pizzas, refetch: refetchPizzas } = usePizzas(equipeAtual?.id, rodadaAtual?.id);
-  const { compras } = useCompras(equipeAtual?.id);
-  const { rodadas: historicoRodadas } = useHistoricoRodadas(equipeAtual?.id);
+  
+  // Use equipeAtual?.id with fallback to prevent hooks from being called conditionally
+  const { pizzas, refetch: refetchPizzas } = usePizzas(equipeAtual?.id || '', rodadaAtual?.id);
+  const { compras } = useCompras(equipeAtual?.id || '');
+  const { rodadas: historicoRodadas } = useHistoricoRodadas(equipeAtual?.id || '');
 
   // Timer sincronizado
   const {
@@ -125,13 +130,7 @@ const EquipeScreen = ({ teamName, teamId }: EquipeScreenProps) => {
     refetchPizzas();
   };
 
-  // Calcular total gasto em tempo real
-  const totalGasto = compras.reduce((sum, c) => sum + c.valor_total, 0);
-
-  // Usar cor e emblema da equipe do banco de dados
-  const corEquipe = equipeAtual?.cor_tema || '#3b82f6';
-  const emblemaEquipe = equipeAtual?.emblema || '🍕';
-
+  // ONLY AFTER ALL HOOKS ARE CALLED, NOW WE CAN HAVE CONDITIONAL RETURNS
   // Mostrar loading se ainda estiver carregando equipes ou se a equipe não foi encontrada
   if (equipesLoading || !equipeAtual) {
     return (
@@ -158,6 +157,13 @@ const EquipeScreen = ({ teamName, teamId }: EquipeScreenProps) => {
       </div>
     );
   }
+
+  // Calcular total gasto em tempo real
+  const totalGasto = compras.reduce((sum, c) => sum + c.valor_total, 0);
+
+  // Usar cor e emblema da equipe do banco de dados
+  const corEquipe = equipeAtual?.cor_tema || '#3b82f6';
+  const emblemaEquipe = equipeAtual?.emblema || '🍕';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-100 to-orange-100 p-4">

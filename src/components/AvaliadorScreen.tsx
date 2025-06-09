@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { usePizzasParaAvaliacao } from '@/hooks/usePizzasParaAvaliacao';
 import { useEquipes } from '@/hooks/useEquipes';
 import { usePizzas } from '@/hooks/usePizzas';
 import { useAvaliacaoTimeout } from '@/hooks/useAvaliacaoTimeout';
+import { useOptimizedRodadas } from '@/hooks/useOptimizedRodadas';
 import { toast } from 'sonner';
 import HistoricoAvaliador from './HistoricoAvaliador';
 import { PizzaWithRelations } from '@/types/database';
@@ -24,10 +26,11 @@ const AvaliadorScreen = () => {
 
   // CUSTOM HOOKS - CALLED UNCONDITIONALLY WITH STABLE PARAMETERS
   const { equipes } = useEquipes();
+  const { rodadaAtual } = useOptimizedRodadas();
   console.log('AvaliadorScreen: useEquipes called, equipes length:', equipes?.length);
 
-  // Always pass the same type consistently - use empty string instead of undefined to maintain stability
-  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar);
+  // Pass rodadaAtual instead of equipeParaAvaliar to fix the type error
+  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(rodadaAtual);
   console.log('AvaliadorScreen: usePizzasParaAvaliacao called, pizzas length:', pizzasParaAvaliacao?.length);
 
   const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar);
@@ -59,7 +62,11 @@ const AvaliadorScreen = () => {
   ];
 
   // DERIVED STATE - COMPUTED AFTER ALL HOOKS
-  const pizzasOrdenadas = pizzasParaAvaliacao.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  // Filter pizzas by selected team
+  const pizzasEquipeFiltradas = pizzasParaAvaliacao.filter(p => 
+    equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true
+  );
+  const pizzasOrdenadas = pizzasEquipeFiltradas.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const pizzasPendentes = pizzasOrdenadas.filter(p => p.status === 'pronta' && !p.resultado);
   const pizzasAvaliadas = todasPizzas.filter(p => 
     p.status === 'avaliada' && 
@@ -128,7 +135,11 @@ const AvaliadorScreen = () => {
   };
 
   const getRodadaInfo = (pizza: PizzaWithRelations) => {
-    return pizza.rodada ? `Rodada ${pizza.rodada.numero} (${pizza.rodada.status})` : 'Rodada N/A';
+    // Since pizza doesn't have rodada relation, use rodadaAtual for context
+    if (rodadaAtual && pizza.rodada_id === rodadaAtual.id) {
+      return `Rodada ${rodadaAtual.numero} (${rodadaAtual.status})`;
+    }
+    return 'Rodada N/A';
   };
 
   const formatTempo = (segundos: number) => {
@@ -291,7 +302,7 @@ const AvaliadorScreen = () => {
             {pizzasPendentes.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {pizzasPendentes.map((pizza) => {
-                  const isRodadaFinalizada = pizza.rodada?.status === 'finalizada';
+                  const isRodadaFinalizada = rodadaAtual?.status === 'finalizada';
                   
                   return (
                     <Card key={pizza.id} className={`shadow-lg border-2 ${isRodadaFinalizada ? 'border-orange-200 bg-orange-50' : 'border-yellow-200'}`}>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PizzaWithRelations } from '@/types/database';
@@ -18,7 +17,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
         .from('pizzas')
         .select(`
           *,
-          equipes!inner(nome, emblema),
+          equipes!inner(nome),
           rodadas!inner(numero, status),
           sabores_pizza(nome)
         `)
@@ -37,7 +36,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
       // Transform the data to match our PizzaWithRelations type
       const transformedData: PizzaWithRelations[] = (data || []).map(item => ({
         ...item,
-        equipe: item.equipes ? { nome: item.equipes.nome, emblema: item.equipes.emblema } : undefined,
+        equipe: item.equipes ? { nome: item.equipes.nome } : undefined,
         rodada: item.rodadas ? { numero: item.rodadas.numero, status: item.rodadas.status } : undefined,
         sabor: item.sabores_pizza ? { nome: item.sabores_pizza.nome } : undefined
       }));

@@ -13,7 +13,7 @@ export type Configuracao = Database['public']['Tables']['configuracoes']['Row']
 
 // Extended Pizza type with populated relations for evaluation screen
 export type PizzaWithRelations = Pizza & {
-  equipe?: { nome: string; emblema?: string };
+  equipe?: { nome: string };
   rodada?: { numero: number; status: string };
   sabor?: { nome: string };
 }

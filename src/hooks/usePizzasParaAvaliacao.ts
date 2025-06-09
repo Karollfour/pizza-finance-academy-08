@@ -1,8 +1,9 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PizzaWithRelations } from '@/types/database';
 
-export const usePizzasParaAvaliacao = (equipeId?: string) => {
+export const usePizzasParaAvaliacao = (equipeId: string) => {
   const [pizzas, setPizzas] = useState<PizzaWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,8 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
         .is('resultado', null)
         .order('created_at', { ascending: true });
 
-      if (equipeId) {
+      // Only filter by equipe if equipeId is not empty
+      if (equipeId && equipeId.trim() !== '') {
         query = query.eq('equipe_id', equipeId);
       }
 
@@ -78,7 +80,8 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
           event: '*',
           schema: 'public',
           table: 'pizzas',
-          ...(equipeId && { filter: `equipe_id=eq.${equipeId}` })
+          // Only filter by equipe if equipeId is not empty
+          ...(equipeId && equipeId.trim() !== '' && { filter: `equipe_id=eq.${equipeId}` })
         },
         (payload) => {
           console.log('Pizza atualizada para avaliação:', payload);

@@ -17,21 +17,20 @@ const AvaliadorScreen = () => {
   console.log('AvaliadorScreen: Component rendering started');
 
   // STATE HOOKS - MUST BE CALLED UNCONDITIONALLY
-  const [equipeParaAvaliar, setEquipeParaAvaliar] = useState<string | null>(null);
+  const [equipeParaAvaliar, setEquipeParaAvaliar] = useState<string>('');
   const [motivosReprovacao, setMotivosReprovacao] = useState<{ [key: string]: string }>({});
 
   console.log('AvaliadorScreen: State hooks called, equipeParaAvaliar:', equipeParaAvaliar);
 
-  // CUSTOM HOOKS - CALLED UNCONDITIONALLY WITH CONSISTENT PARAMETERS
+  // CUSTOM HOOKS - CALLED UNCONDITIONALLY WITH STABLE PARAMETERS
   const { equipes } = useEquipes();
   console.log('AvaliadorScreen: useEquipes called, equipes length:', equipes?.length);
 
-  // Always pass the same type - either string or undefined, never switch between them
-  const equipeId = equipeParaAvaliar || undefined;
-  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeId);
+  // Always pass the same type consistently - use empty string instead of undefined to maintain stability
+  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar || '');
   console.log('AvaliadorScreen: usePizzasParaAvaliacao called, pizzas length:', pizzasParaAvaliacao?.length);
 
-  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeId);
+  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar || '');
   console.log('AvaliadorScreen: usePizzas called, pizzas length:', todasPizzas?.length);
 
   console.log('AvaliadorScreen: All hooks called successfully');
@@ -169,7 +168,17 @@ const AvaliadorScreen = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {equipes.map((equipe, index) => {
-                    const cor = getCorEquipe(index);
+                    const coresEquipe = [
+                      'bg-red-500 hover:bg-red-600',
+                      'bg-blue-500 hover:bg-blue-600', 
+                      'bg-green-500 hover:bg-green-600',
+                      'bg-yellow-500 hover:bg-yellow-600',
+                      'bg-purple-500 hover:bg-purple-600',
+                      'bg-pink-500 hover:bg-pink-600',
+                      'bg-indigo-500 hover:bg-indigo-600',
+                      'bg-orange-500 hover:bg-orange-600'
+                    ];
+                    const cor = coresEquipe[index % coresEquipe.length];
                     
                     return (
                       <Card 

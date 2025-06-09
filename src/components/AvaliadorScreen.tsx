@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,9 +42,15 @@ const AvaliadorScreen = () => {
   // Usar pizzas para avaliação que incluem rodadas finalizadas
   const pizzasOrdenadas = pizzasParaAvaliacao.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   
-  // Todas as pizzas com status 'pronta' e sem resultado ficam em pendentes
+  // Pizzas pendentes: status 'pronta' e sem resultado (independente do status da rodada)
   const pizzasPendentes = pizzasOrdenadas.filter(p => p.status === 'pronta' && !p.resultado);
-  const pizzasAvaliadas = todasPizzas.filter(p => p.status === 'avaliada' && equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true);
+  
+  // Pizzas avaliadas: todas com status 'avaliada' (aprovadas ou reprovadas)
+  const pizzasAvaliadas = todasPizzas.filter(p => 
+    p.status === 'avaliada' && 
+    p.resultado && 
+    (equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true)
+  );
 
   // Função para obter o número do pedido baseado na ordem cronológica
   const getNumeroPedido = (pizza: PizzaWithRelations) => {

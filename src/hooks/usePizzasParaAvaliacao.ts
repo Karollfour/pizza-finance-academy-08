@@ -63,7 +63,7 @@ export const usePizzasParaAvaliacao = (equipeId: string) => {
     }
   };
 
-  // Escutar mudanças em tempo real
+  // Single useEffect for real-time subscription - ALWAYS called consistently
   useEffect(() => {
     // Cleanup any existing subscription
     cleanupChannel();
@@ -72,48 +72,49 @@ export const usePizzasParaAvaliacao = (equipeId: string) => {
     const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const channelName = `pizzas-avaliacao-${equipeId || 'global'}-${uniqueId}`;
     
+    const channelConfig = {
+      event: '*',
+      schema: 'public',
+      table: 'pizzas',
+    } as any;
+
+    // Only add filter if equipeId is not empty
+    if (equipeId && equipeId.trim() !== '') {
+      channelConfig.filter = `equipe_id=eq.${equipeId}`;
+    }
+    
     const channel = supabase
       .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'pizzas',
-          // Only filter by equipe if equipeId is not empty
-          ...(equipeId && equipeId.trim() !== '' && { filter: `equipe_id=eq.${equipeId}` })
-        },
-        (payload) => {
-          console.log('Pizza atualizada para avaliação:', payload);
+      .on('postgres_changes', channelConfig, (payload) => {
+        console.log('Pizza atualizada para avaliação:', payload);
+        
+        // Verificar se é uma pizza que precisa de avaliação (independente do status da rodada)
+        const pizza = payload.new as any;
+        if (pizza && pizza.status === 'pronta' && !pizza.resultado) {
+          // Nova pizza para avaliação ou pizza que ainda precisa ser avaliada
+          fetchPizzasParaAvaliacao(true);
           
-          // Verificar se é uma pizza que precisa de avaliação (independente do status da rodada)
-          const pizza = payload.new as any;
-          if (pizza && pizza.status === 'pronta' && !pizza.resultado) {
-            // Nova pizza para avaliação ou pizza que ainda precisa ser avaliada
-            fetchPizzasParaAvaliacao(true);
-            
-            // Disparar evento para notificar outras telas
-            window.dispatchEvent(new CustomEvent('nova-pizza-para-avaliacao', {
-              detail: {
-                pizza,
-                equipeId: pizza.equipe_id,
-                timestamp: new Date().toISOString()
-              }
-            }));
-          } else if (payload.eventType === 'UPDATE' && pizza?.resultado) {
-            // Pizza foi avaliada - remover das pendentes
-            fetchPizzasParaAvaliacao(true);
-            
-            window.dispatchEvent(new CustomEvent('pizza-avaliada', {
-              detail: {
-                pizza,
-                resultado: pizza.resultado,
-                timestamp: new Date().toISOString()
-              }
-            }));
-          }
+          // Disparar evento para notificar outras telas
+          window.dispatchEvent(new CustomEvent('nova-pizza-para-avaliacao', {
+            detail: {
+              pizza,
+              equipeId: pizza.equipe_id,
+              timestamp: new Date().toISOString()
+            }
+          }));
+        } else if (payload.eventType === 'UPDATE' && pizza?.resultado) {
+          // Pizza foi avaliada - remover das pendentes
+          fetchPizzasParaAvaliacao(true);
+          
+          window.dispatchEvent(new CustomEvent('pizza-avaliada', {
+            detail: {
+              pizza,
+              resultado: pizza.resultado,
+              timestamp: new Date().toISOString()
+            }
+          }));
         }
-      );
+      });
 
     channelRef.current = channel;
 
@@ -134,7 +135,7 @@ export const usePizzasParaAvaliacao = (equipeId: string) => {
     };
   }, [equipeId]);
 
-  // Escutar eventos globais
+  // Single useEffect for global events - ALWAYS called consistently
   useEffect(() => {
     const handleGlobalDataChange = (event: CustomEvent) => {
       const { table } = event.detail;
@@ -171,6 +172,7 @@ export const usePizzasParaAvaliacao = (equipeId: string) => {
     };
   }, [equipeId]);
 
+  // Single useEffect for initial fetch - ALWAYS called consistently
   useEffect(() => {
     fetchPizzasParaAvaliacao();
   }, [equipeId]);

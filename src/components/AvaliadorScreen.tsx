@@ -41,6 +41,7 @@ const AvaliadorScreen = () => {
   // Usar pizzas para avaliação que incluem rodadas finalizadas
   const pizzasOrdenadas = pizzasParaAvaliacao.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   
+  // Todas as pizzas com status 'pronta' e sem resultado ficam em pendentes
   const pizzasPendentes = pizzasOrdenadas.filter(p => p.status === 'pronta' && !p.resultado);
   const pizzasAvaliadas = todasPizzas.filter(p => p.status === 'avaliada' && equipeParaAvaliar ? p.equipe_id === equipeParaAvaliar : true);
 
@@ -123,7 +124,7 @@ const AvaliadorScreen = () => {
             <p className="text-purple-700">Selecione uma equipe para avaliar suas pizzas</p>
             <div className="mt-4 p-3 bg-white/70 rounded-lg">
               <span className="text-lg font-semibold text-purple-800">
-                ⏰ Avaliação disponível mesmo após o fim das rodadas
+                ⏰ Pizzas permanecem disponíveis para avaliação mesmo após o fim do tempo
               </span>
             </div>
           </div>
@@ -209,10 +210,10 @@ const AvaliadorScreen = () => {
               <h1 className="text-3xl font-bold">{equipeSelecionada?.nome}</h1>
             </div>
           </div>
-          <p className="text-gray-600">Avaliando pizzas da equipe selecionada - Incluindo rodadas finalizadas</p>
+          <p className="text-gray-600">Avaliando pizzas da equipe selecionada</p>
           <div className="mt-4 p-3 bg-white/70 rounded-lg">
             <span className="text-lg font-semibold text-purple-800">
-              ⏰ Pizzas pendentes podem ser avaliadas mesmo após o fim das rodadas
+              ⏰ Pizzas prontas permanecem disponíveis para avaliação mesmo após o fim do tempo da rodada
             </span>
           </div>
         </div>
@@ -238,9 +239,16 @@ const AvaliadorScreen = () => {
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
                         <span>{getEquipeNome(pizza.equipe_id)}</span>
-                        <Badge variant="outline">
-                          {getRodadaInfo(pizza)}
-                        </Badge>
+                        <div className="flex gap-2">
+                          <Badge variant="outline">
+                            {getRodadaInfo(pizza)}
+                          </Badge>
+                          {pizza.rodada?.status === 'finalizada' && (
+                            <Badge variant="destructive" className="bg-orange-500">
+                              Tempo Esgotado
+                            </Badge>
+                          )}
+                        </div>
                       </CardTitle>
                       <CardDescription>
                         <span className="font-bold text-lg text-gray-800">Pedido #{getNumeroPedido(pizza)}</span> • Pizza #{pizza.id.slice(-6)} • Sabor: {getSaborPizza(pizza)} • Enviada: {new Date(pizza.created_at).toLocaleTimeString('pt-BR')}
@@ -254,6 +262,11 @@ const AvaliadorScreen = () => {
                           <p className="text-lg font-semibold text-gray-700">Pizza {getSaborPizza(pizza)}</p>
                           <p className="text-gray-600">Produzida pela {getEquipeNome(pizza.equipe_id)}</p>
                           <p className="text-sm text-gray-500">{getRodadaInfo(pizza)}</p>
+                          {pizza.rodada?.status === 'finalizada' && (
+                            <p className="text-sm text-orange-600 font-medium">
+                              ⏰ Rodada finalizada - Pizza aguardando avaliação
+                            </p>
+                          )}
                         </div>
                       </div>
 

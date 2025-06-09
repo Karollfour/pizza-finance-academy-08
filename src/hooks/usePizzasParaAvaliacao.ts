@@ -18,8 +18,9 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
         .from('pizzas')
         .select(`
           *,
-          equipe:equipes(nome, cor_tema, emblema),
-          rodada:rodadas(numero, status)
+          equipe:equipes(nome, emblema),
+          rodada:rodadas(numero, status),
+          sabor:sabores_pizza(nome)
         `)
         .eq('status', 'pronta')
         .is('resultado', null)
@@ -79,7 +80,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
           // Verificar se é uma pizza que precisa de avaliação (independente do status da rodada)
           const pizza = payload.new as Pizza;
           if (pizza && pizza.status === 'pronta' && !pizza.resultado) {
-            // Nova pizza para avaliação
+            // Nova pizza para avaliação ou pizza que ainda precisa ser avaliada
             fetchPizzasParaAvaliacao(true);
             
             // Disparar evento para notificar outras telas
@@ -91,7 +92,7 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
               }
             }));
           } else if (payload.eventType === 'UPDATE' && pizza?.resultado) {
-            // Pizza foi avaliada
+            // Pizza foi avaliada - remover das pendentes
             fetchPizzasParaAvaliacao(true);
             
             window.dispatchEvent(new CustomEvent('pizza-avaliada', {
@@ -142,12 +143,22 @@ export const usePizzasParaAvaliacao = (equipeId?: string) => {
       }
     };
 
+    const handleRodadaFinalizada = () => {
+      // Quando uma rodada é finalizada, atualizar para garantir que 
+      // pizzas pendentes continuem visíveis para avaliação
+      setTimeout(() => {
+        fetchPizzasParaAvaliacao(true);
+      }, 100);
+    };
+
     window.addEventListener('global-data-changed', handleGlobalDataChange as EventListener);
     window.addEventListener('nova-pizza-para-avaliacao', handleNovaPizza as EventListener);
+    window.addEventListener('rodada-finalizada', handleRodadaFinalizada);
 
     return () => {
       window.removeEventListener('global-data-changed', handleGlobalDataChange as EventListener);
       window.removeEventListener('nova-pizza-para-avaliacao', handleNovaPizza as EventListener);
+      window.removeEventListener('rodada-finalizada', handleRodadaFinalizada);
     };
   }, [equipeId]);
 

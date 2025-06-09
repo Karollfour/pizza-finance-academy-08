@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,14 +13,26 @@ import HistoricoAvaliador from './HistoricoAvaliador';
 import { PizzaWithRelations } from '@/types/database';
 
 const AvaliadorScreen = () => {
+  console.log('AvaliadorScreen: Component rendering started');
+
   // STATE HOOKS - MUST BE CALLED UNCONDITIONALLY
   const [equipeParaAvaliar, setEquipeParaAvaliar] = useState<string | null>(null);
   const [motivosReprovacao, setMotivosReprovacao] = useState<{ [key: string]: string }>({});
 
+  console.log('AvaliadorScreen: State hooks called, equipeParaAvaliar:', equipeParaAvaliar);
+
   // CUSTOM HOOKS - CALLED UNCONDITIONALLY WITH STABLE PARAMETERS
   const { equipes } = useEquipes();
-  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar || '');
-  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar || '');
+  console.log('AvaliadorScreen: useEquipes called, equipes length:', equipes?.length);
+
+  // Use undefined instead of empty string to avoid potential issues
+  const { pizzas: pizzasParaAvaliacao } = usePizzasParaAvaliacao(equipeParaAvaliar || undefined);
+  console.log('AvaliadorScreen: usePizzasParaAvaliacao called, pizzas length:', pizzasParaAvaliacao?.length);
+
+  const { pizzas: todasPizzas, avaliarPizza } = usePizzas(equipeParaAvaliar || undefined);
+  console.log('AvaliadorScreen: usePizzas called, pizzas length:', todasPizzas?.length);
+
+  console.log('AvaliadorScreen: All hooks called successfully');
 
   // Cores predefinidas para as equipes
   const coresEquipe = [
@@ -116,8 +127,11 @@ const AvaliadorScreen = () => {
     return pizza.rodada ? `Rodada ${pizza.rodada.numero} (${pizza.rodada.status})` : 'Rodada N/A';
   };
 
+  console.log('AvaliadorScreen: About to render, equipeParaAvaliar:', equipeParaAvaliar);
+
   // CONDITIONAL RENDERING - ONLY AFTER ALL HOOKS ARE CALLED
   if (!equipeParaAvaliar) {
+    console.log('AvaliadorScreen: Rendering team selection screen');
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-6">
         <div className="max-w-6xl mx-auto">
@@ -192,6 +206,8 @@ const AvaliadorScreen = () => {
       </div>
     );
   }
+
+  console.log('AvaliadorScreen: Rendering main evaluation screen');
 
   const equipeSelecionada = getEquipeSelecionada();
   const indexEquipe = equipes.findIndex(e => e.id === equipeParaAvaliar);
